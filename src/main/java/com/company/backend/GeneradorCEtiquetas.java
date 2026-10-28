@@ -350,7 +350,11 @@ public class GeneradorCEtiquetas {
         } else {
             throw new ModeloPrograma.NoSoportado("'imprimir' de '" + operando + "' (arreglo completo, objeto o tipo desconocido)");
         }
-        sb.append("    printf(\"").append(fmt).append(salto ? "\\n" : "").append("\", ").append(r(f, operando)).append(");\n");
+        String valor = r(f, operando);
+        if ("char*".equals(t)) {
+            valor = "(" + valor + " ? " + valor + " : \"null\")"; // cadena nula: imprime "null"
+        }
+        sb.append("    printf(\"").append(fmt).append(salto ? "\\n" : "").append("\", ").append(valor).append(");\n");
     }
 
     /** @return cuartetas consumidas (1 si lee directo a la variable, 2 si le sigue la asignacion). */
@@ -498,6 +502,13 @@ public class GeneradorCEtiquetas {
         }
         String a = r(f, c.getArg1());
         String b = r(f, c.getArg2());
+        // Una cadena nula se concatena como "null" (igual que Java).
+        if ("char*".equals(t1)) {
+            a = "(" + a + " ? " + a + " : \"null\")";
+        }
+        if ("char*".equals(t2)) {
+            b = "(" + b + " ? " + b + " : \"null\")";
+        }
         StringBuilder largo = new StringBuilder("96");
         if ("char*".equals(t1)) {
             largo.append(" + strlen(").append(a).append(")");

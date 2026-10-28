@@ -67,6 +67,7 @@ public class GeneradorRiscV {
         out.append(".data\n");
         out.append(literales.emitirSeccionDatos());
         out.append("__vacio: .asciz \"\"\n");
+        out.append("__nulo: .asciz \"null\"\n");
         out.append(".align 3\n__args: .space 512\n");
         out.append("\n.text\n.globl main\n");
         // Aunque RARS no tenga activada la opcion "iniciar en main", la

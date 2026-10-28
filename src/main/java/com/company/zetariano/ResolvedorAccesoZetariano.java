@@ -126,6 +126,13 @@ public class ResolvedorAccesoZetariano {
                     errores.reportar(linea, columna, "variable, campo o metodo no declarado: '" + nombreBase + "'");
                     return Operando.error();
                 }
+                // Un campo heredado por nombre suelto tambien respeta la visibilidad.
+                SimboloClase declaranteImplicito = declaranteDeCampo(claseActual, nombreBase);
+                if (!accesoPermitido(campo, declaranteImplicito, claseActual)) {
+                    reportarErrorEn(linea, columna, "el campo '" + nombreBase + "' es " + campo.getVisibilidad().name().toLowerCase()
+                            + " en '" + declaranteImplicito.getNombre() + "', no se puede acceder desde aqui");
+                    return Operando.error();
+                }
                 tipoActual = campo.getTipo();
                 textoActual = "this." + nombreBase;
             }

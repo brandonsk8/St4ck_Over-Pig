@@ -17,7 +17,7 @@ grammar Zetariano;
 // padre se busca por nombre en el analizador semantico (Pasada 1 de
 // RegistradorFirmasZetariano), no aqui.
 programa
-    : 'public' 'class' IDENTIFICADOR ('extends' IDENTIFICADOR)? '{' miembro* '}' EOF
+    : 'public'? 'class' IDENTIFICADOR ('extends' IDENTIFICADOR)? '{' miembro* '}' EOF
     ;
 
 miembro

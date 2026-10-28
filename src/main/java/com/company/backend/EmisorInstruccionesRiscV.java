@@ -437,8 +437,8 @@ final class EmisorInstruccionesRiscV {
         }
         if (usaConcat) {
             r.append("__concat:\n"
-                    + "    bnez a0, __cc_a\n    la a0, __vacio\n"
-                    + "__cc_a:\n    bnez a1, __cc_b\n    la a1, __vacio\n"
+                    + "    bnez a0, __cc_a\n    la a0, __nulo\n"
+                    + "__cc_a:\n    bnez a1, __cc_b\n    la a1, __nulo\n"
                     + "__cc_b:\n    mv t0, a0\n    mv t1, a1\n    mv t2, t0\n"
                     + "__cc_l1:\n    lb t3, 0(t2)\n    beqz t3, __cc_l1e\n    addi t2, t2, 1\n    j __cc_l1\n"
                     + "__cc_l1e:\n    sub t4, t2, t0\n    mv t2, t1\n"
@@ -522,6 +522,8 @@ final class EmisorInstruccionesRiscV {
     }
 
     // Imprime un operando (ecall), con o sin salto de linea.
+    private int contadorPrintNulo = 0;
+
     private void emitirPrint(String operando, boolean salto) {
         String t = modelo.tipoOp(f, operando);
         if ("double".equals(t)) {
@@ -531,6 +533,9 @@ final class EmisorInstruccionesRiscV {
             usaDtoa = true;
         } else if ("char*".equals(t)) {
             cargarEntero("a0", operando);
+            // cadena nula: imprime "null"
+            int n = contadorPrintNulo++;
+            sb.append("    bnez a0, __pn_").append(n).append("\n    la a0, __nulo\n__pn_").append(n).append(":\n");
             sb.append("    li a7, 4\n    ecall\n");
         } else if ("char".equals(t)) {
             cargarEntero("a0", operando);
