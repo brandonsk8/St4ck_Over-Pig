@@ -101,6 +101,14 @@ public class ResolvedorAccesoZetariano {
         } else {
             String nombreBase = ctx.IDENTIFICADOR().getText();
             Simbolo variable = ambitoActual.buscar(nombreBase);
+            // System.out.println(...) / System.out.print(...): equivalen a println/print.
+            if (variable == null && nombreBase.equals("System") && sufijos.size() == 3
+                    && tipoDeSufijo(sufijos.get(0)) == SUFIJO_CAMPO && sufijos.get(0).IDENTIFICADOR().getText().equals("out")
+                    && tipoDeSufijo(sufijos.get(1)) == SUFIJO_CAMPO
+                    && (sufijos.get(1).IDENTIFICADOR().getText().equals("println") || sufijos.get(1).IDENTIFICADOR().getText().equals("print"))
+                    && tipoDeSufijo(sufijos.get(2)) == SUFIJO_LLAMADA) {
+                return resolverLlamadaImpresion(sufijos.get(2), linea, columna, sufijos.get(1).IDENTIFICADOR().getText().equals("println"));
+            }
             if (variable != null) {
                 tipoActual = variable.getTipo();
                 textoActual = nombreBase;
@@ -108,6 +116,19 @@ public class ResolvedorAccesoZetariano {
                 // 'println'/'print' son funciones globales de impresion (igual
                 // que 'imprimir' en Y?), no un metodo de la clase - se
                 // resuelven ANTES de asumir que es this.nombreBase(...).
+                // 'read()' / 'leer()': lectura de teclado (igual que 'leer()' en Y?).
+                // Se tipa como cadena; al asignarla a int/double/char el analizador
+                // la convierte en una lectura del tipo del destino.
+                if ((nombreBase.equals("read") || nombreBase.equals("leer")) && claseActual != null
+                        && claseActual.buscarMetodosHeredados(nombreBase, global).isEmpty()) {
+                    if (sufijos.size() > 1 || sufijos.get(0).listaArgumentos() != null) {
+                        reportarErrorEn(linea, columna, "'" + nombreBase + "' no recibe argumentos ni se puede encadenar");
+                        return Operando.error();
+                    }
+                    String temporal = cuartetas.nuevoTemporal();
+                    cuartetas.agregar("read", null, null, temporal);
+                    return new Operando(Tipo.CADENA, temporal);
+                }
                 if (nombreBase.equals("println") || nombreBase.equals("print")) {
                     if (sufijos.size() > 1) {
                         reportarErrorEn(linea, columna, "no se puede seguir accediendo despues de '" + nombreBase + "(...)'");

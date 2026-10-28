@@ -227,6 +227,9 @@ public class ZetarianoAnalizador extends ZetarianoBaseVisitor<Operando> {
             ZetarianoParser.InicializadorContext init = campoCtx.inicializador();
             if (init.expresion() != null) {
                 Operando valor = visit(init.expresion());
+                if (emitirLecturaDirecta(valor, campo.getTipo(), "this." + nombreCampo)) {
+                    continue;
+                }
                 if (valor.esValor() && !campo.getTipo().esCompatibleConPolimorfismo(valor.getTipo(), global)) {
                     reportarError(campoCtx, "no se puede inicializar el campo '" + nombreCampo + "' (" + campo.getTipo() + ") con un valor de tipo " + valor.getTipo());
                 } else if (valor.esValor()) {
@@ -326,6 +329,32 @@ public class ZetarianoAnalizador extends ZetarianoBaseVisitor<Operando> {
         return null;
     }
 
+    /**
+     * 'x = read();': si el valor es una lectura recien emitida y el destino es
+     * int/double/char/String, se reemplaza por una lectura tipada (decl + read + '=')
+     * para que el backend lea con el tipo del destino (variable, campo o elemento).
+     */
+    private boolean emitirLecturaDirecta(Operando valor, Tipo tipoDestino, String destino) {
+        List<com.company.ir.Cuarteta> generadas = cuartetas.getCuartetas();
+        if (!valor.esValor() || generadas.isEmpty() || valor.getTipo().getCategoria() != Tipo.Categoria.CADENA) {
+            return false;
+        }
+        com.company.ir.Cuarteta ultima = generadas.get(generadas.size() - 1);
+        if (!"read".equals(ultima.getOperador()) || !valor.getTexto().equals(ultima.getResultado())) {
+            return false;
+        }
+        Tipo.Categoria c = tipoDestino.getCategoria();
+        if (c != Tipo.Categoria.ENTERO && c != Tipo.Categoria.DECIMAL && c != Tipo.Categoria.CARACTER && c != Tipo.Categoria.CADENA) {
+            return false;
+        }
+        generadas.remove(generadas.size() - 1);
+        String temporal = cuartetas.nuevoTemporal();
+        cuartetas.agregar("decl", tipoDestino.toString(), null, temporal);
+        cuartetas.agregar("read", null, null, temporal);
+        cuartetas.agregar("=", temporal, null, destino);
+        return true;
+    }
+
     @Override
     public Operando visitDeclaracionVariable(ZetarianoParser.DeclaracionVariableContext ctx) {
         String nombre = ctx.IDENTIFICADOR().getText();
@@ -345,6 +374,9 @@ public class ZetarianoAnalizador extends ZetarianoBaseVisitor<Operando> {
             ZetarianoParser.InicializadorContext init = ctx.inicializador();
             if (init.expresion() != null) {
                 Operando valor = visit(init.expresion());
+                if (emitirLecturaDirecta(valor, tipo, nombre)) {
+                    return null;
+                }
                 if (valor.esValor() && !tipo.esCompatibleConPolimorfismo(valor.getTipo(), global)) {
                     reportarError(ctx, "no se puede inicializar '" + nombre + "' (" + tipo + ") con un valor de tipo " + valor.getTipo());
                 } else if (valor.esValor()) {
@@ -366,6 +398,9 @@ public class ZetarianoAnalizador extends ZetarianoBaseVisitor<Operando> {
         }
 
         String op = ctx.opAsignacion().getText();
+        if (op.equals("=") && emitirLecturaDirecta(valor, destino.getTipo(), destino.getTexto())) {
+            return null;
+        }
         // '+=' sobre una cadena es concatenacion, el lado derecho puede ser de cualquier tipo.
         boolean esConcatenacion = op.equals("+=") && destino.getTipo().getCategoria() == Tipo.Categoria.CADENA;
 
